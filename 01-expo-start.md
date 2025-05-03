@@ -16,6 +16,10 @@ Let's dig into our monorepo containing a Cloudflare durable object worker backen
 - Switch over to local development, running the Cloudflare worker locally and connecting to it the web and native mobile frontends.
 - Watch Livestore syncing in action through the eyes of the debugging tools.
 
+### Useful links
+- [How Livestore works](https://livestore.dev/evaluation/when-livestore/)
+- [When to use Livestore / how Livestore scales](https://livestore.dev/evaluation/when-livestore/)
+
 # Exercises
 
 ## Exercise 1: Local development, cloud sync
@@ -66,6 +70,8 @@ In Live Queries, you can see some of the queries that map to the queries in **pa
 
 Look at the sequence of events as you enter data and others update data, as well. These map to materializers defined in your Livestore configuration. You can see these in **packages/shared/schema.ts**. Each materializer defines a way data can be changed.
 
+This is a good picture of how Livestore fundamentally works - it uses [event sourcing](https://livestore.dev/reference/event-sourcing/), whereby the data is represented as a sequence of immutable changes, or events. The SQLite database is a very efficient "read" model that represents the outcome of applying the events in sequence.
+
 #### Sync
 
 You can pause and restart the sync at any time here. Thus, you can simulate a disconnect while still having your phone connected to your local development server and dev tools. Try flipping it on and off while adding notes.
@@ -73,6 +79,36 @@ You can pause and restart the sync at any time here. Thus, you can simulate a di
 ## Exercise 2: Fully-local development
 
 Let's move things over to our own fully-local dev environment, running the mobile app, web app, and cloudflare durable object worker all within your local environment, so you can develop without affecting live data, or even needing anything deployed.
+
+### Switching environments and turning everything on
+
+Both the web and mobile apps have their own environment variables that are used to set the server they're talking to. Let's start the local server and point each one to it, until we have both web and mobile connected to a Cloudflare durable object server (three Node processes running at once).
+
+#### In one terminal tab:
+1. `cd packages/sync-backend` and run `pnpm run dev` to start the durable object server.
+
+#### In a second terminal tab:
+2. `cd packages/mobile`
+3. Change `EXPO_PUBLIC_LIVESTORE_SYNC_URL` to `http://localhost:8787`
+4. Run `npm run dev` (restart this if you're already running it). This time, open up an Android emulator or iOS simulator (press `a` or `i`). The Expo CLI will install Expo Go automatically.
+
+#### In a third terminal tab:
+5. `cd packages/web`
+6. `cp .env.local.example .env.local` to copy the example environment into an actual environment
+7. Set `VITE_LIVESTORE_SYNC_URL` to `ws://localhost:8787`
+8. Run `pnpm run dev` to start the local web development server
+
+🏃**Try it.** You should have two clients and one server running, and the clients should be able to sync with each other. Check the terminal of each process to watch syncing in action.
+
+🏃**Try it (2).** This is also a great time to checkout the devtools again. Both the Expo and web clients have them. On web, check in the console logs for the devtools link.
+
+## Exercise 3: Poking around in Livestore, breaking stuff
+
+### Switch your stores
+
+### Break the "auth"
+
+### Break a query
 
 Note that the app isn't entirely responsive yet (you're be working on that!). So, it might be easiest to shrink the app down to mobile size by opening Chrome Devtools or resizing your browser window.
 

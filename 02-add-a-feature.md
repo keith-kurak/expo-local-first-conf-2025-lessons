@@ -16,7 +16,9 @@ Let's hone in on a thin vertical slice of functionality across Livestore schema 
 - Add a migration for the schema
 - Add the long-press-for-super-reaction functionality
 - Give this functionality a fancy animation using Reanimated
-- (Bonus) Build your app as an EAS Update and run it in Expo Go
+
+### Useful links
+- [How Livestore deals with schema changes](https://livestore.dev/reference/rules-of-mutations/)
 
 # Exercises
 
@@ -264,3 +266,6 @@ export function useMediaQuery() {
 ## Next exercise
 
 [Module 02](02-api-routes-and-auth.md)
+
+## Bonus
+- Deploy this with EAS Update to run without a dev server (TBD)
