@@ -269,3 +269,4 @@ export function useMediaQuery() {
 
 ## Bonus
 - Deploy this with EAS Update to run without a dev server (TBD)
+- Make user ID a URL parameter, so workspaces can be switched via URL
