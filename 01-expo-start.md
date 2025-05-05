@@ -104,6 +104,15 @@ Both the web and mobile apps have their own environment variables that are used 
 
 🏃**Try it (2).** This is also a great time to checkout the devtools again. Both the Expo and web clients have them. On web, check in the console logs for the devtools link.
 
+### More debugging: inspect SQLite state
+Now that we're running our own local sync server, we can more closely inspect what is going on with it.
+
+In **packages/sync-backend**, as changes are made, SQLite database files will be updated at **TBD**. We can inspect those with a SQLite viewer.
+
+1. Install (insert name of SQLite viewer extension here) from the recommended VS Code extensions.
+
+2. Open one of the files at **packages/sync-backend/???/TBD**. Now you can see its contents.
+
 > [!NOTE]
 > Why Does mobile:// use http and web use ws://? TODO: I don't actually know! Is it web sockets vs long-polling?
 

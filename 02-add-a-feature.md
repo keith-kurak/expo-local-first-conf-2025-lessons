@@ -5,13 +5,11 @@
 Let's hone in on a thin vertical slice of functionality across Livestore schema and React Native UI development to get a small taste of what it's like working on such a project.
 
 ### Concepts
-
 - Livestore schema changes
 - React Native frontend development
 - React Native Reanimated (native animations)
 
 ### Tasks
-
 - Add the schema to designate a reaction as a "super" reaction
 - Add a migration for the schema
 - Add the long-press-for-super-reaction functionality
@@ -22,242 +20,134 @@ Let's hone in on a thin vertical slice of functionality across Livestore schema 
 
 # Exercises
 
-## Exercise 0: Get this thing running
+## Exercise 1: Super-react schema
 
-For the full experience, make sure you have the app running on both your phone and your browser. However, you can still do the entire workshop if you can only get one of these working.
+The app already has "reactions", where you can give a note a thumbs up or a heart. Let's add "super reaction" functionality, where holding down the reaction will make it "super." We'll eventually add a fancy animation for this, but for now, let's focus on the data layer.
 
-1. Run `npm install`
-2. Run `npx expo start`
-3. Scan the QR Code on Expo Go on your phone, or press `i` to open in the iOS simulator.
-4. Press `w` to run in your web browser.
+We're going to add a single field to the `reaction` table, a `type` that is either `regular` (the default) or `super`. Long-pressing on the initial reaction will make it super. Long-pressing on an existing reaction you've already made will update that reaction to be super.
 
-Note that the app isn't entirely responsive yet (you're be working on that!). So, it might be easiest to shrink the app down to mobile size by opening Chrome Devtools or resizing your browser window.
+When we think about databases and changing schema, we often think about schema migrations and migrations. In the case of Livestore, we only make schema changes that are forward-compatible. We can add fields as long as they're optional or have a default value. That way, pre-super-reaction events can be processed by a post-super-reaction client version (they're just default to "regular").
 
-## Exercise 1: Routing and layout basics
-
-We're adding a new screen with info about visiting the museum... but where? Let's try a few places, and learn some Expo Router basics along the way.
-
-_This short exercise is helpful if you're pretty new to Expo Router, but doesn't factor into the final app, so if you're already familiar with stack layouts and route groups, you can skip to Exercise 2._
-
-1. Create a **visit.tsx** file in the **(app)** folder. Copy our [**visit.tsx** starter here](/files/01/visit.tsx) for its contents. `(app)` is a _route group_, representing the "logged-in" experience of the app (this implies a "logged out" experience; we'll get back to that).
-2. In your web browser, try navigating to it by using the URL bar, by entering: `http://localhost:8081/visit`. Notice how the route group folder doesn't factor in the URL. These are just for organizing routes and defining their behavior without affecting the URL.
-3. Try adding a `Link` to the "visit" page. The header of the **index** page in **app/(app)/(tabs)/index.tsx** will work:
-
-```tsx
-<Link href="/visit">Visit</Link>
-```
-
-Don't forget to `import { Link } from "expo-router";`
-
-4. Tap on the link in the browser or the mobile app. It should take you to the "visit" page, and you should be able to go back to the main tabs. This is because the **\_layout.tsx** inside the **(app)** folder groups the routes at this level into a _stack navigator_.
-5. Get rid of that `Link` - we're going to put it somewhere else
-
-### Not found routes.
-
-There's a special route at the top of your **app** folder (which is the folder that always contains your Expo Router routes): **not-found.tsx**
-This route will render if your app navigates to a route that doesn't exist. 6. Try typing a non-existent route into the browser, e.g., `http://localhost:8081/slartibartfast`. Where does it go?
-
-## Exercise 2: Add the Visit page to the tab navigator.
-
-We've decided it would be best to have information for visitors as a separate tab.
-
-1. Create a **visit.tsx** file in the **(app)/(tabs)** folder. Copy our [**visit.tsx** starter here](/files/01/visit.tsx) for its contents. (or, if you already created **visit.tsx** in Exercise 1, just drag it into **(tabs)**)
-2. Refresh your browser / reload the app to see the new tab. Now check out **(app)/(tabs)/\_layout.tsx**. This layout defines a tab navigator, so it's saying any routes at this level should be arranged as tabs.
-3. The Visit tab looks pretty basic right now. Not the right icon or text. We can information in **\_layout.tsx** to change the behavior and appearance of the tab. Add this between the exhibits and profile tab:
-
-```tsx
-<Tabs.Screen
-  name="visit"
-  options={{
-    title: "Visit",
-    tabBarIcon: ({ color }) => (
-      <TabBarIcon type="MaterialIcons" name="map" color={color} />
-    ),
-  }}
-/>
-```
-
-🏃**Try it.** Now the tab should look pretty good.
-
-## Exercise 3: Navigating to arbitrary things with dynamic routes
-
-Dynamic routes let you put a variable into your URL, that you can then query on the destination screen. They are defined with square brackets, e.g., `[id]`.
-
-There's already a dynamic route in the app: `/exhibits/[exhibitName]`. When you navigate to that route, the URL will contain the actual exhibit, e.g., `/exhibits/Textiles`
-
-Notice how the artworks don't go anywhere yet when you click on them. Let's fix that.
-
-1. Create the file **app/(app)/works/[workId].tsx** (add the extra folder, of course). Use the [**[workId].tsx** starter here](/files/01/[workId].tsx).
-2. In **Artwork.tsx** (shared by both screens), wrap the artwork `Pressable` in a `Link`, navigating to `works/[workId]`:
-
-```diff
-+  <Link asChild href={`/works/${artwork.id}`}>
-     <Pressable className="flex-row sm:flex-col gap-x-2 h-48 sm:h-96">
-        // ...
-     </Pressable>
-+  </Link>
-```
-
-🏃**Try it.** You should be able to navigate to artwork now. Try a few.
-
-Oh wait, it's going to the same work every time. That's because we didn't read the route parameter inside the **[workId].tsx** screen itself.
-
-3. Add this at the top of **[workId].tsx**, replacing the hardcoded `workId`:
-
-```tsx
-const { workId } = useLocalSearchParams<{
-  workId: string;
-}>();
-```
-
-Don't forget to `import { useLocalSearchParams } from "expo-router";`
-
-🏃**Try it.** You should now be able to navigate to the correct artwork from both the Home and Exhibits tabs.
-
-### About the elephant in the header...
-
-By now, you're probably quite annoyed by that header with route garbage at the top of your screen. You could set `title` in screen options to at least make it something nice, but you'd still have double headers! We've clearly implemented our own header in **[workId].tsx**, so let's get rid of React Navigation's.
-
-4. In **app/(app)/\_layout.tsx**, add a reference to `works/[workId]`, so you can hide the header with screen options:
-
-```tsx
-<Stack.Screen
-  name="works/[workId]"
-  options={{
-    headerShown: false,
-  }}
-/>
-```
-
-## Exercise 4: Nested routes
-
-Notice that not everything in that tabs route is just a single file. There's the **exhibits** folder, with multiple routes. This is a stack nested inside a tab.
-
-Let's experiment with a few scenarios here. **Refresh the browser / shake and refresh your app before each one to reset navigation history**:
-
-- **(A)** Exhibits tab -> click on an exhibit -> go back
-- **(B)** (browser-only) Home tab -> click on an exhibit -> reload page -> go back (can you do it?)
-
-You might have had some problems with B). Expo Router has no idea that the "first" page of the Exhibits tab should always be stacked below `[exhibitName]`, even when the app is reloaded on the page. How could it?
-
-The `initialRouteName` configuration lets you specify a child route that should exist in history _if the app is first loaded on one of its sibling routes_. That sounds tailor-made for B).
-
-2. Add the following to **(app)/(tabs)/exhibits/\_layout.tsx**:
-
-```tsx
-export const unstable_settings = {
-  // Ensure any route can link back to `/`
-  initialRouteName: "index",
-};
-```
-
-This says that, when inside the **exhibits** route, the index should be the first route. The ensures that, even if you go directly to a exhibit, the exhibits list will be underneath it.
-
-🏃**Try it.** **(B)** should work better now.
-
-## Exercise 5: A little bit of responsiveness
-
-Head over to your browser, and make the window wide. Now open an artwork. Real "blown up mobile app" vibes, right? Let's use some navigator props and creative styling to make this a centered modal on web, floating above the underlying content.
-
-1. In **app/(app)/layout.tsx**, add this code just inside the options for this screen:
-
-```diff
-<Stack.Screen
-   name="works/[workId]"
--  options={{
--    headerShown: false,
--  }}
-+ options={{
-+  ...Platform.select({
-+    web: {
-+      presentation: "transparentModal",
-+     animation: "fade",
-+    },
-+    default: {
-+      presentation: "modal",
-+   },
-+  }),
-+ headerShown: false,
-+ }}
-/>
-```
-
-Don't forget to `import { Platform } from "react-native";`
-
-<details>
-  <summary>Expand to just get the whole function for easy copying</summary>
-
-```tsx
-options={{
-  ...Platform.select({
-    web: {
-      presentation: "transparentModal",
-      animation: "fade",
-    },
-    default: {
-      presentation: "modal",
-    },
-  }),
-  headerShown: false,
-}}
-```
-
-</details>
-
-This will make this screen present like a transparent modal, but it will not look very obvious (minus the previous screen exposed underneath) until we shrink the size of the content, so the transparent area will show up underneath it.
-
-Let's use Nativewind's _responsive breakpoints_ to adjust the window size. If you're not used to Nativewind or Tailwind, that's OK. We're just going to do a very little bit to get a taste of it.
-
-Nativewind works by letting you use a standard set of descriptive CSS classes to style components. You put these in the `className` prop instead of `style`. What's neat about it is that your styling code looks completely the same across React Web and React Native.
-
-_Breakpoints_ let you put something in front of one of these classes that says it only applies in certain scenarios. So, `sm:bg-black` means, "only set the background to black when the width is greater than the "small" size breakpoint (>640 device pixels)". Nativewind syntax defaults to "mobile" size. You only use breakpoints when targeting larger screens.
-
-2. Let's update the top-level `View` in **[workId].tsx** so it is centered and only takes up some of the screen when the screen is wider, so we can see our modal effect in action.
-
-```diff
-- <View className="flex-1">
-+ <View className="sm:my-20 sm:w-3/4 sm:self-center flex-1">
-```
-
-🏃**Try it.** Open an artwork and change the screen size. It should show the modal when the screen is wider, but look like a pretty typical mobile full screen view otherwise.
-
-3. However, it doesn't look like a very compelling modal because the background behind it doesn't change. Let's add some shade by wrapping everything in **[workId].tsx** in another view that adds said shade:
-
-```tsx
-<View
-  className={classNames(
-    "bg-white sm:bg-black",
-    "sm:bg-opacity-20",
-    "flex-1 justify-center",
-    Platform.OS === "android" && "pt-safe",
-  )}
->
-  <!-- everything else -->
-</View>
-```
-
-Don't forget to `import classNames from "classnames";` and `import { Platform } from "react-native";`
-
-> [!NOTE]  
-> Hello, new friend! `classNames` is a utility function, helpful for organizing all these bits of Nativewind!
-
-### How would I do this without Nativewind?
-
-There's some fancy media query hooks for React Native that give you programmatic access to breakpoints, which you can then use inline in `style`. It's also pretty straightforward to roll your own:
+1. Inside **shared/schema.ts**, in the `reaction` table, add the `type` field:
 
 ```ts
-import { useWindowDimensions } from "react-native";
+type: State.SQLite.text({
+  schema: Schema.Literal("regular", "super"),
+  default: "regular",
+}),
+```
 
-export function useMediaQuery() {
-  const { width } = useWindowDimensions();
-  return {
-    isSm: width >= 640,
-    isMd: width >= 768,
-    isLg: width >= 1024,
-    isXl: width >= 1280,
-  };
+2. In the same file, look at the `materializers`. These are the mutations- the events that make up the change history in Livestore. We need to add a new materializer that will create a note with a `type`.
+
+Notice that the materializers so far have a `v1` in front. Once a materializer is present, it cannot be deleted, or else it would not be possible to process paste events. So, it can be helpful to create a new `v2` materializer that incorporates the `type` field. Add the following to the `materializers` list:
+
+```ts
+"v2.NoteReactionCreated": ({ id, noteId, emoji, type, createdBy }) =>
+  reaction.insert({
+    id,
+    noteId,
+    emoji,
+    type: type as "regular" | "super",
+    createdBy,
+    createdAt: new Date(),
+  }),
+```
+
+Since `type` has a default value, the `v1` matieralizer will still work on a client version where it has been superceded by the `v2` materializer.
+
+3. Let's also add the materializer for updating just the type on an existing reaction. Add the following:
+
+```ts
+"v2.NoteReactionTypeUpdated": ({ id, type }) =>
+  reaction.update({ type }).where({ id }),
+```
+
+Let's update the bottom sheet that pops up when you'd like to add a reaction to accept the new type parameter. This also serves as a bit of an example of how file-based routing works in an Expo app. The bottom sheet is in **packages/mobile/app/(home)/reaction/[note].tsx**. If you look inside the **packages/mobile/app/(home)/_layout.tsx** file, you'll see the `reaction/[note]` route referenced with `presentation: "formSheet"`. This means that the bottom sheet is a separate screen that pushes on top of the list of notes, but is partially transparent, so you can still see the list underneath it. The `[note]` part of the route is where the note ID is passed, so the screen knows which note the reaction is for.
+
+1. In **app/(home)/reaction/[note].tsx**, update `handleReaction` to incorporate the type:
+
+```diff
+- function handleReaction(emoji: string) {
++ function handleReaction(emoji: string, type: "regular" | "super") {
+  store.commit(
+    events.noteReacted({
+      id: nanoid(),
+      noteId: noteId,
+      emoji: emoji,
++      type: type,
+      createdBy: user!.name,
+    })
+  );
+  router.back();
 }
 ```
+
+> If you hover over the `noteCreated` function, you'll see in intellisense how it is mapping back to `v1.noteCreated`, but it omits the v1.
+
+Then update the `onPress` and add the `onLongPress` events:
+
+```diff
+<Pressable
+  key={reaction}
+-  onPress={() => handleReaction(reaction)}
++  onPress={() => handleReaction(reaction, "regular")}
++  onLongPress={() => handleReaction(reaction, "super")}
+>
+  <ReactionItem key={reaction} reaction={reaction} />
+</Pressable>
+```
+
+🏃**Try it.** You should be able to regular react and super react now. Though you can't see the effects of a super-react yet. You can inspect the event in devtools in order to know that the super reaction was included as part of the note creation event.
+
+## Exercise 2: Showing the super reaction
+
+There's a lot of different ways we could show super reactions to differentiate them from regular reactions. We could show them as separate icons, or we could show separate badge numbers.
+
+Let's do something really simple for now, and highlight the reaction in yellow if there's at least one super reaction for it. This will involve us creating a new query to identify this condition.
+
+1. In **packages/shared/queries.ts**, add this query for just super reactions:
+
+```ts
+export const noteReactionsSuper$ = (noteId: string) =>
+  queryDb(
+    tables.reaction.where({
+      noteId,
+      type: "super",
+      deletedAt: null
+    }),
+    { label: `super-reactions-${noteId}` }
+  );
+```
+
+2. In **packages/mobile/components/NoteReaction.tsx**, add a hook to run the above query:
+
+```tsx
+const superReactions = useQuery(noteReactionsSuper$(noteId));
+```
+
+3. Add styling to each emoji to change its color once its super:
+
+```diff
+{Object.entries(reactionCounts).map(([emoji, count]) => (
+  <Pressable
+    key={emoji}
+-    style={noteReactionsStyles.reactionButton as ViewStyle}
++    style={[noteReactionsStyles.reactionButton as ViewStyle, superReactions.find(sr => sr.emoji === emoji) && { backgroundColor: 'yellow' }]}
+```
+
+🏃**Try it.** Super reactions should now change the how the reactions look.
+
+## Exercise 3: Modifying an existing reaction
+
+Let's now add the functionality to long-press on an existing reaction to make it super.
+
+TBD
+
+## Exercise 4: Fancy animations!
+
+Super reactions aren't really all that super until they have some pizzaz. We're going to add a cool particle effect using React Native Reanimated. This will occur while the long press is in progress, like you're charging up until the reaction is "super".
+
+TBD
 
 ## See the solution
 
