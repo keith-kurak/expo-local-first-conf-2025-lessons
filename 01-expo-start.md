@@ -85,17 +85,17 @@ Let's move things over to our own fully-local dev environment, running the mobil
 
 ### Switching environments and turning everything on
 
-Both the web and mobile apps have their own environment variables that are used to set the server they're talking to. Let's start the local server and point each one to it, until we have both web and mobile connected to a Cloudflare durable object server (three Node processes running at once).
+Both the web and mobile apps have their own environment variables that are used to set the server they're talking to. Let's start the local server and point each one to it, until we have both web and mobile connected to a Cloudflare durable object (three Node processes running at once).
 
 #### In one terminal tab:
 
-1. `cd packages/sync-backend` and run `pnpm run dev` to start the durable object server.
+1. `cd packages/sync-backend` and run `pnpm run dev` to start the durable object.
 
 #### In a second terminal tab:
 
 2. `cd packages/mobile`
 3. Change `EXPO_PUBLIC_LIVESTORE_SYNC_URL` to `http://localhost:8787`
-4. Run `npm run dev` (restart this if you're already running it). This time, open up an Android emulator or iOS simulator (press `a` or `i`). The Expo CLI will install Expo Go automatically.
+4. Run `pnpm run dev` (restart this if you're already running it). This time, open up an Android emulator or iOS simulator (press `a` or `i`). The Expo CLI will install Expo Go automatically.
 
 #### In a third terminal tab:
 
@@ -115,11 +115,11 @@ Both the web and mobile apps have their own environment variables that are used 
 
 Now that we're running our own local sync server, we can more closely inspect what is going on with it.
 
-In **packages/sync-backend**, as changes are made, SQLite database files will be updated at **TBD**. We can inspect those with a SQLite viewer.
+In **packages/sync-backend**, as changes are made, SQLite database files will be updated at **packages/sync-backend/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/**. We can inspect those with an [SQLite viewer](https://marketplace.cursorapi.com/items?itemName=qwtel.sqlite-viewer).
 
-1. Install (insert name of SQLite viewer extension here) from the recommended VS Code extensions.
+1. Install [SQLite Views](https://marketplace.cursorapi.com/items?itemName=qwtel.sqlite-viewer) from the recommended VS Code extensions.
 
-2. Open one of the files at **packages/sync-backend/???/TBD**. Now you can see its contents.
+2. Open one of the files at **packages/sync-backend/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/**. Now you can see its contents.
 
 > [!NOTE]
 > The connection to the server can be made using http or ws, both schemes work because the Durable Object only needs one long-lived TCP stream which can be established either way.
