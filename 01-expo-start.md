@@ -17,6 +17,7 @@ Let's dig into our monorepo containing a Cloudflare durable object worker backen
 - Watch Livestore syncing in action through the eyes of the debugging tools.
 
 ### Useful links
+
 - [How Livestore works](https://livestore.dev/evaluation/when-livestore/)
 - [When to use Livestore / how Livestore scales](https://livestore.dev/evaluation/when-livestore/)
 
@@ -87,14 +88,17 @@ Let's move things over to our own fully-local dev environment, running the mobil
 Both the web and mobile apps have their own environment variables that are used to set the server they're talking to. Let's start the local server and point each one to it, until we have both web and mobile connected to a Cloudflare durable object server (three Node processes running at once).
 
 #### In one terminal tab:
+
 1. `cd packages/sync-backend` and run `pnpm run dev` to start the durable object server.
 
 #### In a second terminal tab:
+
 2. `cd packages/mobile`
 3. Change `EXPO_PUBLIC_LIVESTORE_SYNC_URL` to `http://localhost:8787`
 4. Run `npm run dev` (restart this if you're already running it). This time, open up an Android emulator or iOS simulator (press `a` or `i`). The Expo CLI will install Expo Go automatically.
 
 #### In a third terminal tab:
+
 5. `cd packages/web`
 6. `cp .env.local.example .env.local` to copy the example environment into an actual environment
 7. Set `VITE_LIVESTORE_SYNC_URL` to `ws://localhost:8787`
@@ -104,7 +108,10 @@ Both the web and mobile apps have their own environment variables that are used 
 
 🏃**Try it (2).** This is also a great time to checkout the devtools again. Both the Expo and web clients have them. On web, check in the console logs for the devtools link.
 
+<!-- test -->
+
 ### More debugging: inspect SQLite state
+
 Now that we're running our own local sync server, we can more closely inspect what is going on with it.
 
 In **packages/sync-backend**, as changes are made, SQLite database files will be updated at **TBD**. We can inspect those with a SQLite viewer.
@@ -126,7 +133,7 @@ Livestore clients and the sync server (which is more-or-less just another client
 
 Let's change the store ID's, in the process learning a little bit about the LiveStore adapter.
 
-1. In the mobile app, go to **app/(home)/_layout.tsx**. This is the root layout for any screen that is after the login screen, which is where Livestore syncing is in scope. In Expo Router, a layout is what is rendered before any individual screen inside that folder is rendered. So, it's a useful place for wrapping all or part of the app in context that will be available on any descendent screen.
+1. In the mobile app, go to **app/(home)/\_layout.tsx**. This is the root layout for any screen that is after the login screen, which is where Livestore syncing is in scope. In Expo Router, a layout is what is rendered before any individual screen inside that folder is rendered. So, it's a useful place for wrapping all or part of the app in context that will be available on any descendent screen.
 2. Notice that the entire layout is wrapped in the `LiveStoreProvider`. This defines the active store, the sync connection, and provides various handlers for Livestore events.
 3. The fixed `expo-club` store ID is being passed into the `LiveStoreProvider`. Change that to `user.name`.
 
@@ -146,7 +153,7 @@ The one special thing about the server node is that it also includes a callback 
 
 In a real authentication scenario, you would probably forward a JWT from your authentication system and have the sync server verify the signature. Here, we'll do some simple string validation to demonstrate opening access and restricting access to the sync server.
 
-1. In the mobile app, look back in **app/(home)/_layout.tsx**, in the `LiveStoreProvider` specifically. There is a `syncPayload` property where user information is being provided. This could be changed to provide an access token or JWT depending on who is logged in.
+1. In the mobile app, look back in **app/(home)/\_layout.tsx**, in the `LiveStoreProvider` specifically. There is a `syncPayload` property where user information is being provided. This could be changed to provide an access token or JWT depending on who is logged in.
 2. In the **sync-backend** package, look inside **src/index.ts**. `validatePayload` is where the payload that was passed into the `LiveStoreProvider` is evaluated. If the payload is invalid, an error should be thrown.
 3. Add this code to `validatePayload` to restrict anyone who isn't named "John":
 
@@ -182,7 +189,7 @@ export const visibleNotes$ = queryDb(
     deletedAt: null,
 +    title: { op: "LIKE", value: "%TEST%" }
   }),
-  { label: "visibleNotes" }     
+  { label: "visibleNotes" }
 );
 ```
 
@@ -190,16 +197,16 @@ export const visibleNotes$ = queryDb(
 
 4. If you want to inline a query, that's perfectly fine. Go back to **components/ListNotes.tsx** and modify it to inline the same query:
 
-```
+````
 ```tsx
 const visibleNotes = useQuery(queryDb(
   tables.note.where({
     deletedAt: null,
     title: { op: "LIKE", value: "%TEST%" }
   }),
-  { label: "visibleNotes" }     
+  { label: "visibleNotes" }
 ));
-```
+````
 
 🏃**Try it.** It should work the same.
 
