@@ -101,14 +101,15 @@ Both the web and mobile apps have their own environment variables that are used 
 
 5. `cd packages/web`
 6. `cp .env.local.example .env.local` to copy the example environment into an actual environment
-7. Set `VITE_LIVESTORE_SYNC_URL` to `ws://localhost:8787`
+7. Set `VITE_LIVESTORE_SYNC_URL` to `http://localhost:8787`
 8. Run `pnpm run dev` to start the local web development server
 
 🏃**Try it.** You should have two clients and one server running, and the clients should be able to sync with each other. Check the terminal of each process to watch syncing in action.
 
 🏃**Try it (2).** This is also a great time to checkout the devtools again. Both the Expo and web clients have them. On web, check in the console logs for the devtools link.
 
-<!-- test -->
+> [!NOTE]
+> There is also a LiveStore chrome extension available for web that you can download from the [Releases page](https://github.com/livestorejs/livestore/releases). It will be published to the extensions marketplace soon.
 
 ### More debugging: inspect SQLite state
 
@@ -121,7 +122,8 @@ In **packages/sync-backend**, as changes are made, SQLite database files will be
 2. Open one of the files at **packages/sync-backend/???/TBD**. Now you can see its contents.
 
 > [!NOTE]
-> Why Does mobile:// use http and web use ws://? TODO: I don't actually know! Is it web sockets vs long-polling?
+> The connection to the server can be made using http or ws, both schemes work because the Durable Object only needs one long-lived TCP stream which can be established either way.
+> Because both paths stay open, every state update or mutation can immediately flush deltas down the wire, so the UI looks identical.
 
 ## Exercise 3: Poking around in Livestore, breaking stuff
 
