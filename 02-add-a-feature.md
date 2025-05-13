@@ -5,17 +5,20 @@
 Let's hone in on a thin vertical slice of functionality across Livestore schema and React Native UI development to get a small taste of what it's like working on such a project.
 
 ### Concepts
+
 - Livestore schema changes
 - React Native frontend development
 - React Native Reanimated (native animations)
 
 ### Tasks
+
 - Add the schema to designate a reaction as a "super" reaction
 - Add a migration for the schema
 - Add the long-press-for-super-reaction functionality
 - Give this functionality a fancy animation using Reanimated
 
 ### Useful links
+
 - [How Livestore deals with schema changes](https://livestore.dev/reference/rules-of-mutations/)
 
 # Exercises
@@ -62,7 +65,7 @@ Since `type` has a default value, the `v1` matieralizer will still work on a cli
   reaction.update({ type }).where({ id }),
 ```
 
-Let's update the bottom sheet that pops up when you'd like to add a reaction to accept the new type parameter. This also serves as a bit of an example of how file-based routing works in an Expo app. The bottom sheet is in **packages/mobile/app/(home)/reaction/[note].tsx**. If you look inside the **packages/mobile/app/(home)/_layout.tsx** file, you'll see the `reaction/[note]` route referenced with `presentation: "formSheet"`. This means that the bottom sheet is a separate screen that pushes on top of the list of notes, but is partially transparent, so you can still see the list underneath it. The `[note]` part of the route is where the note ID is passed, so the screen knows which note the reaction is for.
+Let's update the bottom sheet that pops up when you'd like to add a reaction to accept the new type parameter. This also serves as a bit of an example of how file-based routing works in an Expo app. The bottom sheet is in **packages/mobile/app/(home)/reaction/[note].tsx**. If you look inside the **packages/mobile/app/(home)/\_layout.tsx** file, you'll see the `reaction/[note]` route referenced with `presentation: "formSheet"`. This means that the bottom sheet is a separate screen that pushes on top of the list of notes, but is partially transparent, so you can still see the list underneath it. The `[note]` part of the route is where the note ID is passed, so the screen knows which note the reaction is for.
 
 1. In **app/(home)/reaction/[note].tsx**, update `handleReaction` to incorporate the type:
 
@@ -113,7 +116,7 @@ export const noteReactionsSuper$ = (noteId: string) =>
     tables.reaction.where({
       noteId,
       type: "super",
-      deletedAt: null
+      deletedAt: null,
     }),
     { label: `super-reactions-${noteId}` }
   );
@@ -141,7 +144,30 @@ const superReactions = useQuery(noteReactionsSuper$(noteId));
 
 Let's now add the functionality to long-press on an existing reaction to make it super.
 
-TBD
+In **/packages/mobile/components/NoteReactions.tsx**, add an `onLongPress` property to the reaction pressable component.
+
+```diff
+ <Pressable
+    key={emoji}
+    style={noteReactionsStyles.reactionButton as ViewStyle}
++    onLongPress={() => {
++      store.commit(
++        events.noteReacted({
++          id: nanoid(),
++          noteId,
++          emoji,
++          type: "super",
++          createdBy: user!.name,
++        })
++      );
++    }}
+    onPress={() => {
+    ...
+```
+
+If you’re feeling fancy, consider adding haptic feedback to enhance the user experience.
+
+🏃**Try it.** You should be able to create both regular reactions and super reactions now. Once we deploy the sync server, you can try it on the Expo Go app to test the haptic feedback.
 
 ## Exercise 4: Fancy animations!
 
@@ -158,5 +184,6 @@ TBD
 [Module 02](02-api-routes-and-auth.md)
 
 ## Bonus
+
 - Deploy this with EAS Update to run without a dev server (TBD)
 - Make user ID a URL parameter, so workspaces can be switched via URL
