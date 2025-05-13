@@ -173,7 +173,66 @@ If you’re feeling fancy, consider adding haptic feedback to enhance the user e
 
 Super reactions aren't really all that super until they have some pizzaz. We're going to add a cool particle effect using React Native Reanimated. This will occur while the long press is in progress, like you're charging up until the reaction is "super".
 
-TBD
+Open **/packages/mobile/components/ReactionParticles.tsx**, take a look at this component. It creates a particle explosion effect using React Native Reanimated. The component generates 8 small animated particles that burst outward from a central point in a circular pattern. Each particle has randomized properties (size, delay, distance) and uses shared values with animated styles to control its opacity, scale, and position. The particles appear, move outward, and then fade away, creating a satisfying visual feedback effect when a reaction becomes "super". We'll use this to add visual flair to our super reactions.
+
+In **/packages/mobile/components/NoteReactions.tsx**,
+
+1. First, let's add a state variable to keep track of when to show or hide the particles:
+
+```tsx
+const [activeParticleEmoji, setActiveParticleEmoji] = useState<string | null>(
+  null
+);
+```
+
+2. Let's also create a function to handle showing the particles for the specific emoji. This will add a timeout of 1 second to reset the animation:
+
+```tsx
+function handleShowParticles(emoji: string) {
+  setActiveParticleEmoji(emoji);
+  setTimeout(() => {
+    setActiveParticleEmoji(null);
+  }, 1000);
+}
+```
+
+3. Now, modify the `onLongPress` handler to call this function:
+
+```diff
+ <Pressable
+    key={emoji}
+    style={[noteReactionsStyles.reactionButton as ViewStyle, superReactions.find(sr => sr.emoji === emoji) && { backgroundColor: 'yellow' }]}
+    onLongPress={() => {
++     handleShowParticles(emoji);
+      store.commit(
+        events.noteReacted({
+          id: nanoid(),
+          noteId,
+          emoji,
+          type: "super",
+          createdBy: user!.name,
+        })
+      );
+    }}
+    onPress={() => {
+    ...
+```
+
+4. Finally, render the particles component only when the `activeParticleEmoji` is equal to the current emoji being super-reacted:
+
+```tsx
+{
+  activeParticleEmoji === emoji && (
+    <ReactionParticles
+      color={reactionColors[Math.floor(Math.random() * reactionColors.length)]}
+    />
+  );
+}
+```
+
+This should be placed within the Pressable component, right before the close tag.
+
+🏃**Try it.** Now when you long-press on a reaction, you should see a particle explosion effect while it's being charged up to become a super reaction! Feel free to play with the `ReactionParticles` props until you achieve something that feels good.
 
 ## See the solution
 
