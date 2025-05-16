@@ -31,13 +31,14 @@ We're going to add a single field to the `reaction` table, a `type` that is eith
 
 When we think about databases and changing schema, we often think about schema migrations and migrations. In the case of Livestore, we only make schema changes that are forward-compatible. We can add fields as long as they're optional or have a default value. That way, pre-super-reaction events can be processed by a post-super-reaction client version (they're just default to "regular").
 
-1. Inside **shared/schema.ts**, in the `reaction` table, add the `type` field:
+1. Inside **shared/schema.ts**, in the `reaction` table, under `columns`, add the `type` field:
 
-```ts
-type: State.SQLite.text({
-  schema: Schema.Literal("regular", "super"),
-  default: "regular",
+```diff
+deletedAt: State.SQLite.integer({
+  nullable: true,
+  schema: Schema.DateFromNumber,
 }),
++ type: State.SQLite.text({schema: Schema.Literal("regular", "super"), default: "regular",}),
 ```
 
 2. In the same file, look at the `materializers`. These are the mutations- the events that make up the change history in Livestore. We need to add a new materializer that will create a note with a `type`.
@@ -45,7 +46,7 @@ type: State.SQLite.text({
 Notice that the materializers so far have a `v1` in front. Once a materializer is present, it cannot be deleted, or else it would not be possible to process paste events. So, it can be helpful to create a new `v2` materializer that incorporates the `type` field. Add the following to the `materializers` list:
 
 ```ts
-"v2.NoteReactionCreated": ({ id, noteId, emoji, type, createdBy }) =>
+"v2.NoteReacted": ({ id, noteId, emoji, type, createdBy }) =>
   reaction.insert({
     id,
     noteId,
@@ -56,22 +57,35 @@ Notice that the materializers so far have a `v1` in front. Once a materializer i
   }),
 ```
 
-Since `type` has a default value, the `v1` matieralizer will still work on a client version where it has been superceded by the `v2` materializer.
-
-3. Let's also add the materializer for updating just the type on an existing reaction. Add the following:
+3. You'll probably notice some TypeScript squiggles at this point. This is because we can't just define the materializer without a corresponding event. Head over to **events.ts**. Add a new event for the v2 reaction:
 
 ```ts
-"v2.NoteReactionTypeUpdated": ({ id, type }) =>
-  reaction.update({ type }).where({ id }),
+export const noteReacted = Events.synced({
+  name: "v2.NoteReacted",
+  schema: Schema.Struct({
+    id: Schema.String,
+    noteId: Schema.String,
+    emoji: Schema.String,
+    type: Schema.Literal("regular", "super"),
+    createdBy: Schema.String,
+  }),
+});
+```
+
+You'll see more squiggles now, because there's already an event named `noteReacted` being exported. This export is useful for when we actually implement the operation in the UI. Let's rename the old `noteReacted` to `noteReacted_v1`. This means that the old event still exists for the sake of data created before the super like implementation, but the event that's actually used in the UI going forward will always be the new one.
+
+```diff
+- export const noteReacted = Events.synced({
++ export const noteReacted_v1 = Events.synced({
 ```
 
 Let's update the bottom sheet that pops up when you'd like to add a reaction to accept the new type parameter. This also serves as a bit of an example of how file-based routing works in an Expo app. The bottom sheet is in **packages/mobile/app/(home)/reaction/[note].tsx**. If you look inside the **packages/mobile/app/(home)/\_layout.tsx** file, you'll see the `reaction/[note]` route referenced with `presentation: "formSheet"`. This means that the bottom sheet is a separate screen that pushes on top of the list of notes, but is partially transparent, so you can still see the list underneath it. The `[note]` part of the route is where the note ID is passed, so the screen knows which note the reaction is for.
 
-1. In **app/(home)/reaction/[note].tsx**, update `handleReaction` to incorporate the type:
+4. In **app/(home)/reaction/[note].tsx**, update `handleReaction` to incorporate the type:
 
 ```diff
 - function handleReaction(emoji: string) {
-+ function handleReaction(emoji: string, type: "regular" | "super") {
++ function handleReaction(emoji: string, type: "regular" | "super" = "regular") {
   store.commit(
     events.noteReacted({
       id: nanoid(),
@@ -92,8 +106,6 @@ Then update the `onPress` and add the `onLongPress` events:
 ```diff
 <Pressable
   key={reaction}
--  onPress={() => handleReaction(reaction)}
-+  onPress={() => handleReaction(reaction, "regular")}
 +  onLongPress={() => handleReaction(reaction, "super")}
 >
   <ReactionItem key={reaction} reaction={reaction} />
