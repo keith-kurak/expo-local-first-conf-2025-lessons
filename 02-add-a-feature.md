@@ -116,133 +116,121 @@ Then update the `onPress` and add the `onLongPress` events:
 
 ## Exercise 2: Showing the super reaction
 
-There's a lot of different ways we could show super reactions to differentiate them from regular reactions. We could show them as separate icons, or we could show separate badge numbers.
+There's probably a lot of different ways we could show super-reactions, but let's start by showing them as a separate badge number with an orange background.
 
-Let's do something really simple for now, and highlight the reaction in yellow if there's at least one super reaction for it. This will involve us creating a new query to identify this condition.
+There's already a query for reactions. It returns the number of reactions on a note by emoji. In LiveStore, you can use the query syntax for many standard queries, but in this case, we wanted an aggregate query, so we used plain SQLite syntax instead. Let's modify that query to return reactions and super-reaction counts separately.
 
-1. In **packages/shared/queries.ts**, add this query for just super reactions:
+1. In **packages/shared/queries.ts**, update the query for super reaction counts:
 
 ```ts
-export const noteReactionsSuper$ = (noteId: string) =>
+export const noteReactionCountsByEmoji$ = (noteId: string) =>
   queryDb(
-    tables.reaction.where({
-      noteId,
-      type: "super",
-      deletedAt: null,
-    }),
-    { label: `super-reactions-${noteId}` }
+    {
+      query: sql`
+          SELECT
+            emoji,
+-            COUNT(*) AS count,
++            SUM(CASE WHEN type = 'regular' THEN 1 ELSE 0 END) AS regularCount,
++            SUM(CASE WHEN type = 'super' THEN 1 ELSE 0 END) AS superCount
+          FROM reaction
+          WHERE noteId = ? AND deletedAt IS NULL
+          GROUP BY emoji
+        `,
+      schema: Schema.Array(
+        Schema.Struct({
+          emoji: Schema.String,
+-          count: Schema.Number,
++          regularCount: Schema.Number,
++          superCount: Schema.Number,
+        })
+      ),
+      bindValues: [noteId],
+    },
+    { label: `reaction-counts-${noteId}`, deps: [noteId] }
   );
 ```
 
-2. In **packages/mobile/components/NoteReaction.tsx**, add a hook to run the above query:
+2. In **packages/mobile/components/NoteReaction.tsx**, update the loop to handle regular reactions correctly:
+
+```diff
+- {reactionCounts.map(({ emoji, count }) => (
++ {reactionCounts.map(({ emoji, regularCount, superCount }) => (
+    <View
+      key={emoji}
+      style={noteReactionsStyles.reactionButton as ViewStyle}
+    >
+      <Text style={noteReactionsStyles.emojiText as TextStyle}>
+        {emoji}
+      </Text>
+      {regularCount > 0 && (
+        <Text
+          style={[
+            noteReactionsStyles.countText as TextStyle,
+            { right: -10, top: -5 },
+          ]}
+        >
+-          {count}
++          {regularCount}
+        </Text>
+      )}
+```
+
+3. Directly under the regular reaction badge, add a super reaction badge, which will appear in the _bottom_ right corner of the emoji
 
 ```tsx
-const superReactions = useQuery(noteReactionsSuper$(noteId));
+{superCount > 0 && (
+    <Text
+    style={[
+      noteReactionsStyles.countText as TextStyle,
+      { right: -10, bottom: -5, backgroundColor: "orange" },
+    ]}
+  >
+    {superCount}
+  </Text>
+)}
 ```
 
-3. Add styling to each emoji to change its color once its super:
+🏃**Try it.** You should now see regular reaction and super reaction counts separately. 
 
-```diff
-{Object.entries(reactionCounts).map(([emoji, count]) => (
-  <Pressable
-    key={emoji}
--    style={noteReactionsStyles.reactionButton as ViewStyle}
-+    style={[noteReactionsStyles.reactionButton as ViewStyle, superReactions.find(sr => sr.emoji === emoji) && { backgroundColor: 'yellow' }]}
-```
-
-🏃**Try it.** Super reactions should now change the how the reactions look.
-
-## Exercise 3: Modifying an existing reaction
-
-Let's now add the functionality to long-press on an existing reaction to make it super.
-
-In **/packages/mobile/components/NoteReactions.tsx**, add an `onLongPress` property to the reaction pressable component.
-
-```diff
- <Pressable
-    key={emoji}
-    style={noteReactionsStyles.reactionButton as ViewStyle}
-+    onLongPress={() => {
-+      store.commit(
-+        events.noteReacted({
-+          id: nanoid(),
-+          noteId,
-+          emoji,
-+          type: "super",
-+          createdBy: user!.name,
-+        })
-+      );
-+    }}
-    onPress={() => {
-    ...
-```
-
-If you’re feeling fancy, consider adding haptic feedback to enhance the user experience.
-
-🏃**Try it.** You should be able to create both regular reactions and super reactions now. Once we deploy the sync server, you can try it on the Expo Go app to test the haptic feedback.
-
-## Exercise 4: Fancy animations!
+## Exercise 3: Fancy animations! Haptics!
 
 Super reactions aren't really all that super until they have some pizzaz. We're going to add a cool particle effect using React Native Reanimated. This will occur while the long press is in progress, like you're charging up until the reaction is "super".
 
-Open **/packages/mobile/components/ReactionParticles.tsx**, take a look at this component. It creates a particle explosion effect using React Native Reanimated. The component generates 8 small animated particles that burst outward from a central point in a circular pattern. Each particle has randomized properties (size, delay, distance) and uses shared values with animated styles to control its opacity, scale, and position. The particles appear, move outward, and then fade away, creating a satisfying visual feedback effect when a reaction becomes "super". We'll use this to add visual flair to our super reactions.
+Open **/packages/mobile/components/ReactionParticles.tsx**, take a look at this component. It creates a particle explosion effect using React Native Reanimated. The component generates 8 small animated particles that burst outward from a central point in a circular pattern. Each particle has randomized properties (size, delay, distance) and uses shared values with animated styles to control its opacity, scale, and position. The particles appear, move outward, and then fade away, creating a satisfying visual feedback effect when a reaction is on its way to becoming "super". We'll use this to add visual flair when pressing a reaction.
 
-In **/packages/mobile/components/NoteReactions.tsx**,
+In the reaction bottom sheet (**/packages/mobile/app/(home)/reaction/[note].tsx**),
 
 1. First, let's add a state variable to keep track of when to show or hide the particles:
 
 ```tsx
-const [activeParticleEmoji, setActiveParticleEmoji] = useState<string | null>(
-  null
-);
+const [emojiPressInProgress, setEmojiPressInProgress] = useState<
+    string | undefined
+  >(undefined);
 ```
 
-2. Let's also create a function to handle showing the particles for the specific emoji. This will add a timeout of 1 second to reset the animation:
+When an animation should be in progress, this state variable will contain the emoji that should show the animation.
 
-```tsx
-function handleShowParticles(emoji: string) {
-  setActiveParticleEmoji(emoji);
-  setTimeout(() => {
-    setActiveParticleEmoji(null);
-  }, 1000);
-}
-```
-
-3. Now, modify the `onLongPress` handler to call this function:
+2. The animation uses absolute positioning to layer over any siblings in the view hierarchy, so we can just mount it when `emojiPressInProgress` is truthy: 
 
 ```diff
- <Pressable
-    key={emoji}
-    style={[noteReactionsStyles.reactionButton as ViewStyle, superReactions.find(sr => sr.emoji === emoji) && { backgroundColor: 'yellow' }]}
-    onLongPress={() => {
-+     handleShowParticles(emoji);
-      store.commit(
-        events.noteReacted({
-          id: nanoid(),
-          noteId,
-          emoji,
-          type: "super",
-          createdBy: user!.name,
-        })
-      );
-    }}
-    onPress={() => {
-    ...
+ <ReactionItem key={reaction} reaction={reaction} />
++  {emojiPressInProgress === reaction ? (<ReactionParticles color="orange" />) : null}
+</Pressable>
 ```
 
-4. Finally, render the particles component only when the `activeParticleEmoji` is equal to the current emoji being super-reacted:
+We could get really fancy with long press timing by using a `Gesture.Tap` component from `react-native-reanimated`, precisely controlling the duration of the long press, when the animation starts and stops, etc. But we will keep it simple for now, mounting the animation component when a press starts and unmounting it when the press completes. This will be too fast for a short press, but just perfect for a long press.
 
-```tsx
-{
-  activeParticleEmoji === emoji && (
-    <ReactionParticles
-      color={reactionColors[Math.floor(Math.random() * reactionColors.length)]}
-    />
-  );
-}
+3. Use `onPressIn` and `onPressOut` to set `emojiPressInProgress` for the duration of the press:
+
+```diff
+<Pressable
+  key={reaction}
+  onPress={() => handleReaction(reaction)}
+  onLongPress={() => handleReaction(reaction, "super")}
++  onPressIn={() => setEmojiPressInProgress(reaction)}
++  onPressOut={() => setEmojiPressInProgress(undefined)}
+>
 ```
-
-This should be placed within the Pressable component, right before the close tag.
 
 🏃**Try it.** Now when you long-press on a reaction, you should see a particle explosion effect while it's being charged up to become a super reaction! Feel free to play with the `ReactionParticles` props until you achieve something that feels good.
 
@@ -255,6 +243,4 @@ This should be placed within the Pressable component, right before the close tag
 [Module 02](02-api-routes-and-auth.md)
 
 ## Bonus
-
-- Deploy this with EAS Update to run without a dev server (TBD)
-- Make user ID a URL parameter, so workspaces can be switched via URL
+- We could use a lot of the same logic in the bottom sheet inside of **NoteReaction.tsx** to also allow long pressing of an emoji already appearing below the note to also add a super reaction. Try doing this.
