@@ -1,4 +1,4 @@
-# Module 01: Let's build with Expo and Livestore
+# Module 02: Thin Vertical Slice - add schema and UI to create a new feature
 
 ### Goal
 
@@ -233,6 +233,12 @@ We could get really fancy with long press timing by using a `Gesture.Tap` compon
 ```
 
 🏃**Try it.** Now when you long-press on a reaction, you should see a particle explosion effect while it's being charged up to become a super reaction! Feel free to play with the `ReactionParticles` props until you achieve something that feels good.
+
+4. Finally, let's use `expo-haptics` to add a little tactile buzz to adding a reaction. Inside `handleReaction`, add a short buzz for a regular react and a heavy buzz for a super react:
+
+```tsx
+Haptics.impactAsync(type === "regular" ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Heavy);
+```
 
 ## See the solution
 
