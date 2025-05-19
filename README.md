@@ -4,7 +4,7 @@ Workshop starter template for the Expo / Livestore workshop at Local First Confe
 
 ## How to use this repo
 
-1. Fork the [companion repo](https://github.com/keith-kurak/expo-router-codemash-2025-starter). You'll start working right on the `main` branch.
+1. Fork the [companion repo](https://github.com/betomoedano/livestore-expo-starter). You'll start working right on the `main` branch.
 2. Start at the first module by opening up the file starting with `01-`.
 3. Do the rest of the modules in order.
 
@@ -32,7 +32,7 @@ We will use your mobile device at least at the beginning to test against a real 
 
 ### 3. Download the starter repo and make sure it works
 
-1. Fork and clone the [Starter repo]((https://github.com/keith-kurak/expo-router-codemash-2025-starter) to your computer. (Github desktop or Github CLI work just fine for this)
+1. Fork and clone the [Starter repo](https://github.com/betomoedano/livestore-expo-starter) to your computer. (Github desktop or Github CLI work just fine for this)
 
 2. Open the project in Visual Studio Code and install the recommended extensions when it prompts you do to so.
 
